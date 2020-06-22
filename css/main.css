@@ -1,0 +1,176 @@
+body {
+    margin: 0;
+    height: 100vh;
+    background: 0xFFFFFF;
+}
+
+.card-body {
+    padding-bottom: 0;
+}
+
+.main-tool {
+    width: 4.5rem;
+    right: 2rem;
+    top: 5.5rem;
+    opacity: 0.9;
+    position: absolute;
+    background-color: white;
+    border-radius: 1em;
+    z-index: 900;
+}
+
+.line-tool {
+    width: 15rem;
+    right: 6.5rem;
+    top: 8.7rem;
+    opacity: 0.9;
+    position: absolute;
+    background-color: white;
+    display: none;
+    z-index: 700;
+}
+
+.img-control:hover {
+    opacity: 0.5;
+}
+
+.magic-wand-tool {
+    width: 15rem;
+    right: 6.5rem;
+    top: 11.7rem;
+    opacity: 0.9;
+    position: absolute;
+    background-color: white;
+    display: none;
+    z-index: 700;
+}
+
+.a_file {
+    cursor: pointer;
+}
+
+.file {
+    opacity: 0;
+    position: absolute;
+    z-index: -1;
+}
+
+.navbar {
+    position: absolute;
+    width: 100%;
+}
+
+input.scale {
+    margin-right: 10px;
+    padding-left: 10px;
+    padding-right: 0px;
+}
+
+.btn-unit {
+    margin-right: 10px;
+}
+
+div.card-header-div {
+    padding-left: 3px;
+}
+
+img {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+img.background {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+img.img-logo {
+    margin-bottom: 0;
+    margin-right: 0.5rem;
+}
+
+.dropdown-menu-right {
+    right: 0;
+    left: auto;
+    margin-top: 5px;
+}
+
+img.header {
+    margin-bottom: 3px;
+}
+
+.up-down-img {
+    padding: 1px 1px 1px 1px;
+    margin-bottom: 0px;
+    border-style: solid;
+    border-color: white;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-left-width: 1px;
+    border-bottom-width: 1px;
+    margin-right: 10px;
+}
+
+.scale-span {
+    color: white;
+    padding-top: 5px;
+    margin-right: 10px;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+}
+
+.canvas-area {
+    z-index: 10;
+}
+
+.canvas-background {
+    z-index: 2;
+}
+
+.hide-image {
+    position: absolute;
+    top: 5.5rem;
+    left: 2rem;
+    width: 9rem;
+    z-index: 900;
+}
+
+.hide-canvas {
+    position: absolute;
+    top: 8.5rem;
+    left: 2rem;
+    width: 9rem;
+    z-index: 900;
+}
+
+.area-panel {
+    position: absolute;
+    right: 1rem;
+    bottom: 0;
+    z-index: 700;
+}
+
+.list-group {
+    flex-direction: row;
+}
+
+.area_info {
+    padding: 15px 5px 0 5px;
+    background-color: #435776;
+}
+
+svg {
+    margin-right: 5px;
+    margin-left: 5px;
+}
+
+.area-index {
+    color: red;
+    font-weight: bold;
+}
