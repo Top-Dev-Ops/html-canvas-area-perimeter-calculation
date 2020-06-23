@@ -1,6 +1,6 @@
 var canvas = document.getElementById('canvas');
 var scene = document.getElementById('canvas_background');
-var image = document.getElementById('background');
+var img = document.getElementById('background');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 scene.width = window.innerWidth;
@@ -17,6 +17,7 @@ var hide_image = false;
 var hide_canvas = false;
 var area_length = 1;
 var scale = 5;
+var zoom_scale = 1;
 
 
 // Zoom & Drag
@@ -27,7 +28,7 @@ currentX = scene.width/2;
 currentY = scene.height/2;
 
 
-var selected_vertex_id = 0;
+var selected_vertex_id = -1;
 
 var perimeter = new Array();
 var complete = false;
@@ -52,13 +53,13 @@ $(function() {
     gridLine();
 });
 
-function gridLine() {
+function gridLine(zoom_scale = 1) {
     sceneCtx.beginPath();
     sceneCtx.strokeStyle = '#dbd3d3';
-    for (x = 0; x <= canvas.width; x += 20) {
+    for (x = 0; x <= canvas.width; x += 20 * zoom_scale) {
         sceneCtx.moveTo(x, 0);
         sceneCtx.lineTo(x, canvas.height);
-        for (y = 0; y <= canvas.height; y += 20) {
+        for (y = 0; y <= canvas.height; y += 20 * zoom_scale) {
             sceneCtx.moveTo(0, y);
             sceneCtx.lineTo(canvas.width, y);
         }
@@ -187,26 +188,44 @@ document.getElementById('pen_tool').addEventListener('click', function (e) {
     scene.style.zIndex = 2;
 });
 document.getElementById('mouse_pointer_tool').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "mouse_pointer_tool";
 });
 document.getElementById('zoom_in_tool').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "zoom_in_tool";
     zoom(1.1);
+    zoom_scale *= 1.1;
+    gridLine(zoom_scale);
 });
 document.getElementById('zoom_out_tool').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "zoom_out_tool";
     zoom(0.9);
+    zoom_scale *= .9;
+    gridLine(zoom_scale);
 });
 document.getElementById('hand_tool').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "hand_tool";
 });
 document.getElementById('undo_tool').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "undo_tool";
 });
 document.getElementById('redo_tool').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "redo_tool";
 });
 document.getElementById('sms_tool').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "sms_tool";
 });
 
@@ -249,6 +268,7 @@ document.getElementById('magic_wand_tool_subtract').addEventListener('click', fu
 canvas.addEventListener('mouseup', mouseUp);
 canvas.addEventListener('mousedown', mouseDown);
 canvas.addEventListener('mousemove', mouseMove);
+canvas.addEventListener('mousewheel', mouseWheel);
 // mouse events to scene(background canvas)
 scene.addEventListener('mouseup', sceneMouseUp);
 scene.addEventListener('mousedown', sceneMouseDown);
@@ -260,16 +280,24 @@ var readURL = function(input) {
         var reader = new FileReader();
         reader.onload = function (e) {
             sceneCtx.clearRect(0, 0, sceneCtx.width, sceneCtx.height);
-            tempHeight=0;
-            tempWidth = 0;
-
-            image.src = e.target.result;
-            tempWidth = image.width;
-            tempHeight = image.height;
+            img.src = e.target.result;
+            tempWidth = img.width;
+            tempHeight = img.height;
             setTimeout(() => {
-                // sceneCtx.drawImage(image, (canvas.width - image.width) / 2, (canvas.height - image.height) / 2, image.width, image.height);
-                sceneCtx.drawImage(image, (canvas.width - tempWidth) / 2, (canvas.height - tempHeight) / 2, tempWidth, tempHeight);
-                console.log("initial", tempWidth, tempHeight);
+                // sceneCtx.drawImage(image, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2, img.width, img.height);
+                sceneCtx.drawImage(img, (canvas.width - tempWidth) / 2, (canvas.height - tempHeight) / 2, tempWidth, tempHeight);
+
+                imageInfo = {
+                    width: img.width,
+                    height: img.height,
+                    context: sceneCtx
+                };
+
+                var tempCtx = document.createElement("canvas").getContext("2d");
+                tempCtx.canvas.width = window.innerWidth;
+                tempCtx.canvas.height = window.innerHeight;
+                tempCtx.drawImage(img, (canvas.width - img.width), (canvas.height - img.height));
+                imageInfo.data = tempCtx.getImageData((canvas.width - img.width), (canvas.height - img.height), imageInfo.width, imageInfo.height);
                 gridLine();
             }, 200);
         }
@@ -423,13 +451,17 @@ function calc_area_perimeter(coordsarray) {
     tmp.push(coordsarray[0]);
     var id = 0;
     while (id < tmp.length - 1) {
-        area += (tmp[id]['x'] * tmp[id + 1]['y'] - tmp[id + 1]['x'] * tmp[id]['y']);
+        area += (tmp[id]['x'] / zoom_scale * tmp[id + 1]['y'] / zoom_scale - tmp[id + 1]['x'] / zoom_scale * tmp[id]['y'] / zoom_scale);
         if (id != tmp.length - 1) {
-            perimeter_length += Math.sqrt((tmp[id]['x'] - tmp[id + 1]['x']) * (tmp[id]['x'] - tmp[id + 1]['x']) + (tmp[id]['y'] - tmp[id + 1]['y']) * (tmp[id]['y'] - tmp[id + 1]['y']));
+            perimeter_length += Math.sqrt(
+                (tmp[id]['x'] / zoom_scale - tmp[id + 1]['x'] / zoom_scale)
+                * (tmp[id]['x'] / zoom_scale - tmp[id + 1]['x'] / zoom_scale)
+                + (tmp[id]['y'] / zoom_scale - tmp[id + 1]['y'] / zoom_scale)
+                * (tmp[id]['y'] / zoom_scale - tmp[id + 1]['y'] / zoom_scale));
         }
         id += 1;
     }
-    var result = { 'area': Math.abs(area / 2), 'perimeter': perimeter_length.toFixed(2) };
+    var result = { 'area': Math.abs(area / 2).toFixed(2), 'perimeter': perimeter_length.toFixed(2) };
     return result;
 }
 
@@ -508,6 +540,25 @@ function mouseDown(event) {
             }
             break;
         case 'line_tool_rectangle':
+            if(complete){
+                var x1 = event.clientX;
+                var y1 = event.clientY;
+                var id = check_perimeter_pt_clicked(x1, y1, perimeter)
+                if (id != -1) {      // clicked
+                    canvas.style.cursor = 'crosshair';
+                    selected_vertex_id = id;
+                    var endMove = function() {
+                        canvas.removeEventListener('mousemove', while_pt_Move);
+                        canvas.removeEventListener('mouseup', endMove);
+                    };
+
+                    event.stopPropagation();
+                    canvas.addEventListener('mousemove', while_pt_Move);
+                    canvas.addEventListener('mouseup', endMove);
+                }
+                return false;
+            }
+
             x = event.clientX - rect.left;
             y = event.clientY - rect.top;
             canvas.style.cursor = "crosshair";
@@ -534,12 +585,19 @@ function mouseDown(event) {
                 mouseY <= (currentY + tempHeight/2)) {
               isDraggable = true;
             }
+            canvas.style.cursor = "move";
             break
         case 'zoom_in_tool':
             zoom(1.1);
+            zoom_scale *= 1.1;
+            gridLine(zoom_scale);
+            canvas.style.cursor = "zoom-in";
             break;
         case 'zoom_out_tool':
             zoom(0.9);
+            zoom_scale *= 0.9;
+            gridLine(zoom_scale);
+            canvas.style.cursor = "zoom-out";
             break;
     }
 }
@@ -551,6 +609,7 @@ function mouseUp(event) {
             y1 = event.clientY - rect.top;
             drawRecCircle(x, y, x1, y1);
             isDown = false;
+            complete = true;
             break;
         case 'line_tool_circle':
             isDown = false;
@@ -618,13 +677,46 @@ function mouseMove(event) {
                 currentY = event.pageY - this.offsetTop;
             }
             drawImage();
+            canvas.style.cursor = "move";
             break;
+        case 'zoom_in_tool':
+            canvas.style.cursor = "zoom-in";
+            break;
+        case 'zoom_out_tool':
+            canvas.style.cursor = "zoom-out";
+            break;
+    }
+}
+
+function mouseWheel(e) {
+    if (e.wheelDelta > 0) {
+        zoom(1.1);
+        zoom_scale *= 1.1;
+        gridLine(zoom_scale);
+    } else {
+        zoom(.9);
+        zoom_scale *= .9;
+        gridLine(zoom_scale);
     }
 }
 
 function sceneMouseDown(e) {
     document.getElementById('line_tool_card').style.display = 'none';
     document.getElementById('magic_wand_tool_card').style.display = 'none';    
+    if (selected_tool === 'magic_wand_tool_magic') {
+        console.log(selected_tool);
+        if (e.button == 0) {
+
+            // appended by rjh:
+            if (mask != null) {
+                mask = null;
+            }
+            //
+            allowDraw = true;
+            downPoint = getMousePosition(e);
+            drawMask(downPoint.x, downPoint.y);
+        } else allowDraw = false;
+    }
 }
 
 function sceneMouseUp(event) {
@@ -643,14 +735,84 @@ function initializeVariables() {
 
 function drawImage() {
     sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
-    sceneCtx.drawImage(image, currentX-(tempWidth/2), currentY-(tempHeight/2), tempWidth, tempHeight);
-    console.log("drawing", tempWidth, tempHeight);
+    sceneCtx.drawImage(img, currentX-(tempWidth/2), currentY-(tempHeight/2), tempWidth, tempHeight);
+    gridLine(zoom_scale);
 }
 
 function zoom(scale){
     sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
-    tempWidth = tempWidth* scale;
+    tempWidth = tempWidth * scale;
     tempHeight = tempHeight*scale;
-    sceneCtx.drawImage(image, currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
-    console.log("zooming", tempWidth, tempHeight);
+    sceneCtx.drawImage(img, currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
 }
+
+setInterval(function() { hatchTick(); }, 300);
+
+function hatchTick() {
+    hatchOffset = (hatchOffset + 1) % (hatchLength * 2);
+    drawBorder(true);
+}
+
+function drawBorder(noBorder) {
+    if (!mask) return;
+
+    var x, y, i, j, k,
+        w = imageInfo.width,
+        h = imageInfo.height,
+        otherCtx = imageInfo.context,
+        imgData = otherCtx.createImageData(w, h),
+        res = imgData.data;
+
+    if (!noBorder) cacheInd = MagicWand.getBorderIndices(mask);
+
+    otherCtx.clearRect((canvas.width - img.width) / 2, (canvas.height - img.height) / 2, w, h);
+
+    coordsarray = [];
+
+    var len = cacheInd.length;
+    for (j = 0; j < len; j++) {
+        i = cacheInd[j];
+        x = i % w; // calc x by index
+        y = (i - x) / w; // calc y by index
+        k = (y * w + x) * 4;
+        if ((x + y + hatchOffset) % (hatchLength * 2) < hatchLength) { // detect hatch color 
+            res[k + 3] = 255; // black, change only alpha
+        } else {
+            res[k] = 255; // white
+            res[k + 1] = 255;
+            res[k + 2] = 255;
+            res[k + 3] = 255;
+        }
+
+        coordsarray.push({ 'x': x, 'y': y });
+    }
+    ctx.putImageData(imageInfo.data, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2);
+    otherCtx.putImageData(imgData, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2);
+    gridLine();
+    console.log("area" + calc_area_perimeter(coordsarray));
+    console.log(coordsarray);
+}
+
+function getMousePosition(e) {
+    x = e.clientX - rect.left;
+    y = e.clientY - rect.top;
+    console.log(x, y);
+    return {
+        x: Math.floor(x - (canvas.width - img.width) / 2),
+        y: Math.floor(y - (canvas.height - img.height) / 2)
+    };
+}
+
+function drawMask(x, y) {
+    if (!imageInfo) return;
+    var image = {
+        data: imageInfo.data.data,
+        width: imageInfo.width,
+        height: imageInfo.height,
+        bytes: 4
+    };
+    mask = MagicWand.floodFill(image, x, y, currentThreshold, null, true);
+    mask = MagicWand.gaussBlurOnlyBorder(mask, blurRadius);
+    drawBorder();
+
+};
