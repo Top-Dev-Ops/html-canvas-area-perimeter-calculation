@@ -1,6 +1,6 @@
 var canvas = document.getElementById('canvas');
 var scene = document.getElementById('canvas_background');
-var img = document.getElementById('background');
+var image = document.getElementById('background');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 scene.width = window.innerWidth;
@@ -17,6 +17,15 @@ var hide_image = false;
 var hide_canvas = false;
 var area_length = 1;
 var scale = 5;
+
+
+// Zoom & Drag
+var isDraggable = false;
+var currentX = 0;
+var currentY = 0;
+currentX = scene.width/2;
+currentY = scene.height/2;
+
 
 var selected_vertex_id = 0;
 
@@ -182,9 +191,11 @@ document.getElementById('mouse_pointer_tool').addEventListener('click', function
 });
 document.getElementById('zoom_in_tool').addEventListener('click', function(e) {
     selected_tool = "zoom_in_tool";
+    zoom(1.1);
 });
 document.getElementById('zoom_out_tool').addEventListener('click', function(e) {
     selected_tool = "zoom_out_tool";
+    zoom(0.9);
 });
 document.getElementById('hand_tool').addEventListener('click', function(e) {
     selected_tool = "hand_tool";
@@ -248,9 +259,17 @@ var readURL = function(input) {
     if (input.files && input.files[0]) {
         var reader = new FileReader();
         reader.onload = function (e) {
-            img.src = e.target.result;
+            sceneCtx.clearRect(0, 0, sceneCtx.width, sceneCtx.height);
+            tempHeight=0;
+            tempWidth = 0;
+
+            image.src = e.target.result;
+            tempWidth = image.width;
+            tempHeight = image.height;
             setTimeout(() => {
-                sceneCtx.drawImage(img, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2, img.width, img.height);
+                // sceneCtx.drawImage(image, (canvas.width - image.width) / 2, (canvas.height - image.height) / 2, image.width, image.height);
+                sceneCtx.drawImage(image, (canvas.width - tempWidth) / 2, (canvas.height - tempHeight) / 2, tempWidth, tempHeight);
+                console.log("initial", tempWidth, tempHeight);
                 gridLine();
             }, 200);
         }
@@ -505,7 +524,23 @@ function mouseDown(event) {
             y = event.clientY - rect.top;
             ctx.moveTo(x, y);
             isDown = true;
-            break;    
+            break;
+        case 'hand_tool':
+            var mouseX = event.pageX - this.offsetLeft;
+            var mouseY = event.pageY - this.offsetTop;
+            if (mouseX >= (currentX - tempWidth/2) &&
+                mouseX <= (currentX + tempWidth/2) &&
+                mouseY >= (currentY - tempHeight/2) &&
+                mouseY <= (currentY + tempHeight/2)) {
+              isDraggable = true;
+            }
+            break
+        case 'zoom_in_tool':
+            zoom(1.1);
+            break;
+        case 'zoom_out_tool':
+            zoom(0.9);
+            break;
     }
 }
 
@@ -522,6 +557,9 @@ function mouseUp(event) {
             break;
         case 'pen_tool':
             isDown = false;
+            break;
+        case 'hand_tool':
+            isDraggable = false;
             break;
     }
 }
@@ -573,6 +611,13 @@ function mouseMove(event) {
             ctx.lineTo(x1, y1);
             ctx.strokeStyle = '#FF0000';
             ctx.stroke();
+            break
+        case 'hand_tool':
+            if (isDraggable) {
+                currentX = event.pageX - this.offsetLeft;
+                currentY = event.pageY - this.offsetTop;
+            }
+            drawImage();
             break;
     }
 }
@@ -594,4 +639,18 @@ function initializeVariables() {
     perimeter = new Array();
     complete = false;
     selected_tool = '';
+}
+
+function drawImage() {
+    sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
+    sceneCtx.drawImage(image, currentX-(tempWidth/2), currentY-(tempHeight/2), tempWidth, tempHeight);
+    console.log("drawing", tempWidth, tempHeight);
+}
+
+function zoom(scale){
+    sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
+    tempWidth = tempWidth* scale;
+    tempHeight = tempHeight*scale;
+    sceneCtx.drawImage(image, currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
+    console.log("zooming", tempWidth, tempHeight);
 }
