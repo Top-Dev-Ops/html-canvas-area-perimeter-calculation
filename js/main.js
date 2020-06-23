@@ -70,34 +70,35 @@ document.getElementById('scale_text').addEventListener('change', e => {
     scale = e.target.value;
 });
 
-// import file from file dialog and set it as background.
-var readURL = function(input) {
-    filename = input.files[0].name;
-    if (input.files && input.files[0]) {
-        console.log(filename);
-        var reader = new FileReader();
-        reader.onload = function (e) {
-            img.src = e.target.result;
-            setTimeout(() => {
-                sceneCtx.drawImage(img, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2, img.width, img.height);
-                gridLine();
-            }, 200);
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-document.getElementById('file').addEventListener('change', function (e) {
-    sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
-    readURL(this);
-});
-
 // clear canvas.
 document.getElementById('clear_canvas').addEventListener('click', function(e) {
     sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     gridLine();
-    perimeter = new Array();
-    complete = false;
+    initializeVariables();
+});
+document.getElementById('save').addEventListener('click', function(e) {
+
+});
+document.getElementById('export').addEventListener('click', function(e) {
+
+});
+document.getElementById('print').addEventListener('click', function(e) {
+    window.print();
+});
+// import file from file dialog and set it as background.
+document.getElementById('file').addEventListener('change', function (e) {
+    sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
+    readURL(this);
+});
+document.getElementById('show_map').addEventListener('click', function(e) {
+
+});
+document.getElementById('settings').addEventListener('click', function(e) {
+
+});
+document.getElementById('help').addEventListener('click', function(e) {
+
 });
 
 // hide & show image or canvas.
@@ -134,6 +135,8 @@ document.getElementById('area_add').addEventListener('click', function() {
         document.getElementById('area_info_' + index).style.display = 'none';
         index--;
     }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    initializeVariables();
 });
 function area_panel_clicked(event) {
     var index = 1;
@@ -149,6 +152,8 @@ function area_panel_clicked(event) {
 
 // hide & show the main tool card when the 'minimize' button is clicked.
 document.getElementById('minimize').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
     minimize_clicked = !minimize_clicked;
     if (minimize_clicked) {
         document.getElementById('main_tool_card').style.display = 'none';
@@ -196,16 +201,19 @@ document.getElementById('sms_tool').addEventListener('click', function(e) {
 
 // line tool card selection.
 document.getElementById('line_tool_line').addEventListener('click', function() {
+    initializeVariables();
     selected_tool = 'line_tool_line';
     document.getElementById('line_tool_card').style.display = 'none';
     scene.style.zIndex = 2;
 });
 document.getElementById('line_tool_rectangle').addEventListener('click', function() {
+    initializeVariables();
     selected_tool = 'line_tool_rectangle';
     document.getElementById('line_tool_card').style.display = 'none';
     scene.style.zIndex = 2;
 });
 document.getElementById('line_tool_circle').addEventListener('click', function() {
+    initializeVariables();
     selected_tool = 'line_tool_circle';
     document.getElementById('line_tool_card').style.display = 'none';
     scene.style.zIndex = 2;
@@ -234,6 +242,21 @@ canvas.addEventListener('mousemove', mouseMove);
 scene.addEventListener('mouseup', sceneMouseUp);
 scene.addEventListener('mousedown', sceneMouseDown);
 scene.addEventListener('mousemove', sceneMouseMove);
+
+var readURL = function(input) {
+    filename = input.files[0].name;
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            img.src = e.target.result;
+            setTimeout(() => {
+                sceneCtx.drawImage(img, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2, img.width, img.height);
+                gridLine();
+            }, 200);
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 
 function line_intersects(p0, p1, p2, p3) {
     var s1_x, s1_y, s2_x, s2_y;
@@ -374,19 +397,20 @@ function while_pt_Move(ev) {
 
 // created by rjh: calculate the area using the array of vertex coordinates ({ 'x': x, 'y': y }) not applicable to intersected polygon
 function calc_area_perimeter(coordsarray) {
-    var tmp = coordsarray;
     var area = 0;
-    var perimeter = 0;
+    var perimeter_length = 0;
+    var tmp = new Array();
+    coordsarray.forEach(elem => tmp.push(elem));
     tmp.push(coordsarray[0]);
     var id = 0;
     while (id < tmp.length - 1) {
         area += (tmp[id]['x'] * tmp[id + 1]['y'] - tmp[id + 1]['x'] * tmp[id]['y']);
         if (id != tmp.length - 1) {
-            perimeter += Math.sqrt((tmp[id]['x'] - tmp[id + 1]['x']) * (tmp[id]['x'] - tmp[id + 1]['x']) + (tmp[id]['y'] - tmp[id + 1]['y']) * (tmp[id]['y'] - tmp[id + 1]['y']));
+            perimeter_length += Math.sqrt((tmp[id]['x'] - tmp[id + 1]['x']) * (tmp[id]['x'] - tmp[id + 1]['x']) + (tmp[id]['y'] - tmp[id + 1]['y']) * (tmp[id]['y'] - tmp[id + 1]['y']));
         }
         id += 1;
     }
-    var result = { 'area': Math.abs(area / 2), 'perimeter': perimeter.toFixed(2) };
+    var result = { 'area': Math.abs(area / 2), 'perimeter': perimeter_length.toFixed(2) };
     return result;
 }
 
@@ -523,6 +547,17 @@ function mouseMove(event) {
             ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
             ctx.fill();
             ctx.closePath();
+            point(x, y);
+            point(x, y1);
+            point(x1, y);
+            point(x1, y1);
+            perimeter = new Array();
+            perimeter.push({ 'x': x, 'y': y });
+            perimeter.push({ 'x': x, 'y': y1 });
+            perimeter.push({ 'x': x1, 'y': y1 });
+            perimeter.push({ 'x': x1, 'y': y });
+            document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
+            document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
             break;
         case 'line_tool_circle':
             if (!isDown) return;
@@ -553,4 +588,10 @@ function sceneMouseUp(event) {
 
 function sceneMouseMove(event) {
     
+}
+
+function initializeVariables() {
+    perimeter = new Array();
+    complete = false;
+    selected_tool = '';
 }
