@@ -19,6 +19,8 @@ var area_length = 1;
 var scale = 5;
 var zoom_scale = 1;
 
+var verticalTop = null, verticalBottom = null, horizontalLeft = null, horizontalRight = null;
+
 
 // Zoom & Drag
 var isDraggable = false;
@@ -32,6 +34,8 @@ var selected_vertex_id = -1;
 
 var perimeter = new Array();
 var complete = false;
+
+var centerX, centerY, radiusX, radiusY;
 
 // Magic Wand Variables
 colorThreshold = 15;
@@ -47,6 +51,7 @@ mask = null;
 downPoint = null;
 allowDraw = false;
 currentThreshold = colorThreshold;
+
 
 // draw grids on canvas.
 $(function() {
@@ -80,7 +85,11 @@ document.getElementById('scale_text').addEventListener('change', e => {
     scale = e.target.value;
 });
 
-// clear canvas.
+// settings dropdown
+document.getElementById('settings_button').addEventListener('click', function(e) {
+    document.getElementById('line_tool_card').style.display = 'none';
+    document.getElementById('magic_wand_tool_card').style.display = 'none';
+});
 document.getElementById('clear_canvas').addEventListener('click', function(e) {
     sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -269,6 +278,7 @@ canvas.addEventListener('mouseup', mouseUp);
 canvas.addEventListener('mousedown', mouseDown);
 canvas.addEventListener('mousemove', mouseMove);
 canvas.addEventListener('mousewheel', mouseWheel);
+canvas.addEventListener('dblclick', dblClick);
 // mouse events to scene(background canvas)
 scene.addEventListener('mouseup', sceneMouseUp);
 scene.addEventListener('mousedown', sceneMouseDown);
@@ -328,6 +338,8 @@ function point(x, y){
     ctx.strokeStyle = "red";
     ctx.fillRect(x-3, y-3, 6, 6);
     ctx.moveTo(x,y);
+    ctx.textAlign = "start";
+    ctx.fillText(x + " : " + y, x, y);
 }
 
 function draw(end){
@@ -345,7 +357,7 @@ function draw(end){
             end || point(perimeter[i]['x'],perimeter[i]['y']);
         }
     }
-    if (end){
+    if (end) {
         ctx.lineTo(perimeter[0]['x'],perimeter[0]['y']);
         ctx.closePath();
         ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
@@ -385,31 +397,66 @@ function check_intersect(x,y){
 function drawRecCircle(x1, y1, x2, y2) {
     if (selected_tool === 'line_tool_rectangle') {
         ctx.beginPath();
-        ctx.rect(x, y, x1 - x, y1 - y);
+        ctx.strokeStyle = "#0000FF";
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        ctx.closePath();
         ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        ctx.fill();
+        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
     } else if (selected_tool === 'line_tool_circle') {
-        var radiusX = (x2 - x1) * 0.5,   // radius for x based on input
+        radiusX = (x2 - x1) * 0.5,   // radius for x based on input
         radiusY = (y2 - y1) * 0.5,   // radius for y based on input
         centerX = x1 + radiusX,      // calc center
         centerY = y1 + radiusY,
         step = 0.01,                 // resolution of ellipse
         a = step,                    // counter
         pi2 = Math.PI * 2 - step;    // end angle
-    
+        
+        horizontalLeft = null;
+        horizontalRight = null;
+        verticalTop = null;
+        verticalBottom = null;
+
+        perimeter = new Array();
         // start a new path
         ctx.beginPath();
         // set start point at angle 0
-        ctx.moveTo(centerX + radiusX * Math.cos(0),
-                centerY + radiusY * Math.sin(0));
+        ctx.moveTo(parseInt(centerX + radiusX * Math.cos(0)), parseInt(centerY + radiusY * Math.sin(0)));
+        horizontalRight = { 'x': parseInt(centerX + radiusX * Math.cos(0)), 'y': parseInt(centerY + radiusY * Math.sin(0)) };
+        horizontalLeft = null;
+        verticalTop = null;
+        verticalBottom = null;
+        perimeter.push(horizontalRight);
         // create the ellipse    
         for(; a < pi2; a += step) {
-            ctx.lineTo(centerX + radiusX * Math.cos(a),
-                    centerY + radiusY * Math.sin(a));
+            ctx.lineTo(parseInt(centerX + radiusX * Math.cos(a)), parseInt(centerY + radiusY * Math.sin(a)));
+            if ( a <= Math.PI / 2 + step && a >= Math.PI / 2 - step) {
+                if (!verticalBottom) {
+                    verticalBottom = { 'x': parseInt(centerX + radiusX * Math.cos(a)), 'y': parseInt(centerY + radiusY * Math.sin(a)) };
+                    perimeter.push(verticalBottom);
+                    continue;
+                }
+            }
+            if ( a <= Math.PI + step && a >= Math.PI - step ) {
+                if (!horizontalLeft) {
+                    horizontalLeft = { 'x': parseInt(centerX + radiusX * Math.cos(a)), 'y': parseInt(centerY + radiusY * Math.sin(a)) };
+                    perimeter.push(horizontalLeft);
+                    continue;
+                }
+            }
+            if ( a <= Math.PI * 1.5 + step && a >= Math.PI * 1.5 - step) {
+                if (!verticalTop) {
+                    verticalTop = { 'x': parseInt(centerX + radiusX * Math.cos(a)), 'y': parseInt(centerY + radiusY * Math.sin(a)) };
+                    perimeter.push(verticalTop);
+                    continue;
+                }
+            }
+            perimeter.push({ 'x': parseInt(centerX + radiusX * Math.cos(a)), 'y': parseInt(centerY + radiusY * Math.sin(a))});
         }
-        // close it and stroke it for demo
-        // ctx.closePath();
-        ctx.strokeStyle = '#FF0000';
+        // close it and stroke it
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.fill();
+        ctx.strokeStyle = '#0000FF';
         ctx.stroke();
     }
 }
@@ -612,6 +659,13 @@ function mouseUp(event) {
             complete = true;
             break;
         case 'line_tool_circle':
+            document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
+            document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+            point(horizontalRight['x'], horizontalRight['y']);
+            point(horizontalLeft['x'], horizontalLeft['y']);
+            point(verticalBottom['x'], verticalBottom['y']);
+            point(verticalTop['x'], verticalTop['y']);
+            complete = true;
             isDown = false;
             break;
         case 'pen_tool':
@@ -639,11 +693,7 @@ function mouseMove(event) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             x1 = event.clientX - rect.left;
             y1 = event.clientY - rect.top;
-            ctx.beginPath();
-            ctx.rect(x, y, x1 - x, y1 - y);
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-            ctx.fill();
-            ctx.closePath();
+            drawRecCircle(x, y, x1, y1);
             point(x, y);
             point(x, y1);
             point(x1, y);
@@ -653,15 +703,30 @@ function mouseMove(event) {
             perimeter.push({ 'x': x, 'y': y1 });
             perimeter.push({ 'x': x1, 'y': y1 });
             perimeter.push({ 'x': x1, 'y': y });
-            document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-            document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
             break;
         case 'line_tool_circle':
             if (!isDown) return;
-            x1 = event.clientX - rect.left;
-            y1 = event.clientY - rect.top;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawRecCircle(x, y, x1, y1);
+            // console.log(complete);
+            if (complete) {
+                var temp_x  = event.clientX - rect.left;
+                var temp_y = event.clientY - rect.top;
+                if (temp_x >= parseInt(verticalTop['x']) - 10 && temp_x <= parseInt(verticalTop['x']) + 10 && temp_y >= parseInt(verticalTop['y']) - 10 && temp_y <= parseInt(verticalTop['y']) + 10 ) {
+                    verticalTop['x'] = temp_x;
+                    verticalTop['y'] = temp_y;
+                    bezierLine(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, true);
+                } else if (temp_x >= parseInt(verticalBottom['x']) - 10 && temp_x <= parseInt(verticalBottom['x']) + 10 && temp_y >= parseInt(verticalBottom['y']) - 10 && temp_y <= parseInt(verticalBottom['y']) + 10 ) {
+                    verticalBottom['x'] = temp_x;
+                    verticalBottom['y'] = temp_y;
+                    bezierLine(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, false);
+                }
+            } else {
+                x1 = parseInt(event.clientX - rect.left);
+                y1 = parseInt(event.clientY - rect.top);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawRecCircle(x, y, x1, y1);
+                document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
+                document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+            }
             break;
         case 'pen_tool':
             if (!isDown) return;
@@ -697,6 +762,18 @@ function mouseWheel(e) {
         zoom(.9);
         zoom_scale *= .9;
         gridLine(zoom_scale);
+    }
+}
+
+function dblClick(event) {
+    x1 = event.clientX - rect.left;
+    y1 = event.clientY - rect.top;
+    var index = check_perimeter_pt_clicked(x1, y1, perimeter);
+    if (index != -1) {
+        canvas.style.cursor = "crosshair";
+        point(perimeter[index]['x'], perimeter[index]['y']);
+    } else {
+        canvas.style.cursor = "default";
     }
 }
 
@@ -755,7 +832,6 @@ function hatchTick() {
 
 function drawBorder(noBorder) {
     if (!mask) return;
-
     var x, y, i, j, k,
         w = imageInfo.width,
         h = imageInfo.height,
@@ -764,11 +840,8 @@ function drawBorder(noBorder) {
         res = imgData.data;
 
     if (!noBorder) cacheInd = MagicWand.getBorderIndices(mask);
-
     otherCtx.clearRect((canvas.width - img.width) / 2, (canvas.height - img.height) / 2, w, h);
-
     coordsarray = [];
-
     var len = cacheInd.length;
     for (j = 0; j < len; j++) {
         i = cacheInd[j];
@@ -783,7 +856,6 @@ function drawBorder(noBorder) {
             res[k + 2] = 255;
             res[k + 3] = 255;
         }
-
         coordsarray.push({ 'x': x, 'y': y });
     }
     ctx.putImageData(imageInfo.data, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2);
@@ -814,5 +886,89 @@ function drawMask(x, y) {
     mask = MagicWand.floodFill(image, x, y, currentThreshold, null, true);
     mask = MagicWand.gaussBlurOnlyBorder(mask, blurRadius);
     drawBorder();
+};
 
+function bezierLine(p0, p1, p2, place){
+    temp_perimeter = new Array();
+    var top_x = parseInt(2 * p1['x'] - p0['x'] / 2 - p2['x'] / 2);
+    var top_y = parseInt(2 * p1['y'] - p0['y'] / 2 - p2['y'] / 2);
+    var accuracy = 0.01;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.strokeStyle = "#FF0000";
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+    var point_met = false;
+    var pass = false;
+
+    if (place) {
+        ctx.moveTo(horizontalLeft['x'], horizontalLeft['y']);
+        temp_perimeter.push({ 'x': horizontalLeft['x'], 'y': horizontalLeft['y'] });
+        for (var i = 0; i < 1.01; i += accuracy) {
+            line_x = parseInt((1-i) * (1-i) * p0['x'] + 2 * (1-i) * i * top_x + i * i * p2['x']);
+            line_y = parseInt((1-i) * (1-i) * p0['y'] + 2 * (1-i) * i * top_y + i * i * p2['y']);
+            temp_perimeter.push({ 'x': line_x, 'y': line_y });
+            ctx.lineTo(line_x, line_y);
+        }
+        
+        for (var i = 0; i < perimeter.length; i++) {
+            if (parseInt(perimeter[i]['x']) == line_x && parseInt(perimeter[i]['y']) == line_y) {
+                point_met = true;
+                i++;
+            }
+            if (parseInt(perimeter[i]['x']) == horizontalLeft['x'] && parseInt(perimeter[i]['y']) == horizontalLeft['y']) {
+                point_met = false;
+                i++;
+            }
+            if (point_met) {
+                temp_perimeter.push(perimeter[i]);
+                ctx.lineTo(perimeter[i]['x'], parseInt(perimeter[i]['y']));
+            }
+        }
+        perimeter = new Array();
+        temp_perimeter.forEach(elem => {
+            perimeter.push(elem);
+        });
+        // console.log(perimeter.length);
+    } else {
+        ctx.moveTo(horizontalRight['x'], horizontalRight['y']);
+        temp_perimeter.push({ 'x': horizontalRight['x'], 'y': horizontalRight['y'] });
+        for (var i = 0; i < 1.01; i += accuracy) {
+            line_x = parseInt((1-i) * (1-i) * p2['x'] + 2 * (1-i) * i * top_x + i * i * p0['x']);
+            line_y = parseInt((1-i) * (1-i) * p2['y'] + 2 * (1-i) * i * top_y + i * i * p0['y']);
+            temp_perimeter.push({ 'x': line_x, 'y': line_y });
+            ctx.lineTo(line_x, line_y);
+        }
+        var index = 0;
+        perimeter.forEach(elem => {
+            if (elem['x'] == horizontalLeft['x'] && elem['y'] == horizontalLeft['y']) {
+                point_met = true;
+            } else {
+                if (point_met) {
+                    pass = true;
+                    if (index == 0) {
+                        temp_perimeter.push(horizontalLeft);
+                    }
+                    index++;
+                }
+            }
+            if (elem['x'] == horizontalRight['x'] && elem['y'] == horizontalRight['y']) {
+                point_met = false;
+            }
+            if (point_met && pass) {
+                temp_perimeter.push(elem);
+                ctx.lineTo(elem['x'], elem['y']);
+            }
+        });
+        perimeter = new Array();
+        temp_perimeter.forEach(elem => {
+            perimeter.push(elem);
+        });
+    }
+    
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+
+    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
+    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
 };
