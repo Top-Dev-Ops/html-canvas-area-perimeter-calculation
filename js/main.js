@@ -21,14 +21,21 @@ var zoom_scale = 1;
 
 var verticalTop = null, verticalBottom = null, horizontalLeft = null, horizontalRight = null;
 
+// redrawing polygon object
+var perimeter_list = [];
 
 // Zoom & Drag
 var isDraggable = false;
-var currentX = 0;
-var currentY = 0;
-currentX = scene.width/2;
-currentY = scene.height/2;
-
+var currentX = scene.width/2;
+var currentY = scene.height/2;
+var startX;
+var startY;
+var resizerRadius=2 ;
+var rr=resizerRadius*resizerRadius;
+var draggingResizer={x:0,y:0};
+var imageX=50;
+var imageY=50;
+var imageRight,imageBottom;
 
 var selected_vertex_id = -1;
 
@@ -52,6 +59,8 @@ downPoint = null;
 allowDraw = false;
 currentThreshold = colorThreshold;
 
+magicX_rate = 0; // appended by rjh:
+magicY_rate = 0;
 
 // draw grids on canvas.
 $(function() {
@@ -146,6 +155,8 @@ document.getElementById('hide_canvas').addEventListener('click', function(e) {
 
 // area list add at the bottom of the screen.
 document.getElementById('area_add').addEventListener('click', function() {
+    console.log(perimeter.length);
+    perimeter_list.push(perimeter);
     area_length++;
     document.getElementById('area_panel').insertAdjacentHTML('beforeend', "<li class='list-group-item' id='area_" + area_length + "' onclick='area_panel_clicked(this);'><span class='area-index'>" + area_length + "</span></li>");
     document.getElementById('area_panel').insertAdjacentHTML('beforeend', "<div class='list-group-item area_info' id='area_info_" + area_length + "'><svg class='bi bi-square' width='1em' height='1em' viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z'/></svg><span style='color: white;' id='area_perimeter_" + area_length + "'>0 cm</span><svg class='bi bi-square-fill' width='1em' height='1em' viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'><rect width='16' height='16' rx='2'/></svg><span style='color: white;' id='area_area_" + area_length + "'>0 cm<sup>2</sup></span></div>");
@@ -156,12 +167,18 @@ document.getElementById('area_add').addEventListener('click', function() {
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     initializeVariables();
+    
 });
 function area_panel_clicked(event) {
     var index = 1;
     while (index <= area_length) {
         if (index == event.innerText) {
             document.getElementById('area_info_' + index).style.display = 'block';
+            perimeter = new Array();
+            perimeter_list[index].forEach(elem => {
+                perimeter.push(elem);
+            });
+            draw(true);
         } else {
             document.getElementById('area_info_' + index).style.display = 'none';
         }
@@ -205,17 +222,22 @@ document.getElementById('zoom_in_tool').addEventListener('click', function(e) {
     document.getElementById('line_tool_card').style.display = 'none';
     document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "zoom_in_tool";
-    zoom(1.1);
     zoom_scale *= 1.1;
+    zoom(1.1);
+    
     gridLine(zoom_scale);
+    imageX *=1.1;
+    imageY *= 1.1;
 });
 document.getElementById('zoom_out_tool').addEventListener('click', function(e) {
     document.getElementById('line_tool_card').style.display = 'none';
     document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "zoom_out_tool";
+    zoom_scale *= .9; // changed by rjh:
     zoom(0.9);
-    zoom_scale *= .9;
     gridLine(zoom_scale);
+    imageX *= .9;
+    imageY *=  .9;
 });
 document.getElementById('hand_tool').addEventListener('click', function(e) {
     document.getElementById('line_tool_card').style.display = 'none';
@@ -262,7 +284,7 @@ document.getElementById('line_tool_circle').addEventListener('click', function()
 document.getElementById('magic_wand_tool_magic').addEventListener('click', function() {
     selected_tool = 'magic_wand_tool_magic';
     document.getElementById('magic_wand_tool_card').style.display = 'none';
-    scene.style.zIndex = 12;
+    scene.style.zIndex = 2;
 });
 document.getElementById('magic_wand_tool_add').addEventListener('click', function() {
     selected_tool = 'magic_wand_tool_add';
@@ -297,17 +319,23 @@ var readURL = function(input) {
                 // sceneCtx.drawImage(image, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2, img.width, img.height);
                 sceneCtx.drawImage(img, (canvas.width - tempWidth) / 2, (canvas.height - tempHeight) / 2, tempWidth, tempHeight);
 
+                imageX = (canvas.width - tempWidth)/2;
+                imageY = (canvas.height - tempHeight)/2;
+                imageRight=imageX+tempWidth;
+                imageBottom=imageY+tempHeight;
+
                 imageInfo = {
-                    width: img.width,
-                    height: img.height,
-                    context: sceneCtx
+                    width: canvas.width,
+                    height: canvas.height,
+                    context: ctx
                 };
 
                 var tempCtx = document.createElement("canvas").getContext("2d");
                 tempCtx.canvas.width = window.innerWidth;
                 tempCtx.canvas.height = window.innerHeight;
-                tempCtx.drawImage(img, (canvas.width - img.width), (canvas.height - img.height));
-                imageInfo.data = tempCtx.getImageData((canvas.width - img.width), (canvas.height - img.height), imageInfo.width, imageInfo.height);
+                tempCtx.drawImage(img, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2);
+                // imageInfo.data = tempCtx.getImageData((canvas.width - img.width), (canvas.height - img.height), imageInfo.width, imageInfo.height);
+                imageInfo.data = tempCtx.getImageData(0, 0, imageInfo.width, imageInfo.height);
                 gridLine();
             }, 200);
         }
@@ -358,12 +386,13 @@ function draw(end){
         }
     }
     if (end) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineTo(perimeter[0]['x'],perimeter[0]['y']);
         ctx.closePath();
         ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
         ctx.fill();
         ctx.strokeStyle = 'blue';
-        complete = true;
+        // complete = true;
     }
     ctx.stroke();
 }
@@ -396,12 +425,12 @@ function check_intersect(x,y){
 
 function drawRecCircle(x1, y1, x2, y2) {
     if (selected_tool === 'line_tool_rectangle') {
-        ctx.beginPath();
-        ctx.strokeStyle = "#0000FF";
-        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+        perimeter = new Array();
+        perimeter.push({'x': x1, 'y': y1});
+        perimeter.push({'x': x1, 'y': y2});
+        perimeter.push({'x': x2, 'y': y2});
+        perimeter.push({'x': x2, 'y': y1});
+        draw(true);
     } else if (selected_tool === 'line_tool_circle') {
         radiusX = (x2 - x1) * 0.5,   // radius for x based on input
         radiusY = (y2 - y1) * 0.5,   // radius for y based on input
@@ -417,10 +446,6 @@ function drawRecCircle(x1, y1, x2, y2) {
         verticalBottom = null;
 
         perimeter = new Array();
-        // start a new path
-        ctx.beginPath();
-        // set start point at angle 0
-        ctx.moveTo(parseInt(centerX + radiusX * Math.cos(0)), parseInt(centerY + radiusY * Math.sin(0)));
         horizontalRight = { 'x': parseInt(centerX + radiusX * Math.cos(0)), 'y': parseInt(centerY + radiusY * Math.sin(0)) };
         horizontalLeft = null;
         verticalTop = null;
@@ -428,7 +453,6 @@ function drawRecCircle(x1, y1, x2, y2) {
         perimeter.push(horizontalRight);
         // create the ellipse    
         for(; a < pi2; a += step) {
-            ctx.lineTo(parseInt(centerX + radiusX * Math.cos(a)), parseInt(centerY + radiusY * Math.sin(a)));
             if ( a <= Math.PI / 2 + step && a >= Math.PI / 2 - step) {
                 if (!verticalBottom) {
                     verticalBottom = { 'x': parseInt(centerX + radiusX * Math.cos(a)), 'y': parseInt(centerY + radiusY * Math.sin(a)) };
@@ -452,12 +476,7 @@ function drawRecCircle(x1, y1, x2, y2) {
             }
             perimeter.push({ 'x': parseInt(centerX + radiusX * Math.cos(a)), 'y': parseInt(centerY + radiusY * Math.sin(a))});
         }
-        // close it and stroke it
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        ctx.fill();
-        ctx.strokeStyle = '#0000FF';
-        ctx.stroke();
+        draw(true);
     }
 }
 
@@ -473,7 +492,6 @@ function check_perimeter_pt_clicked(x, y, perimeter) {
     return len;
 }
 
-// created by rjh: move the point of [id] to the coordinate (x,y)
 function while_pt_Move(ev) {
     perimeter[selected_vertex_id]['x'] = ev.clientX;
     perimeter[selected_vertex_id]['y'] = ev.clientY;
@@ -489,7 +507,6 @@ function while_pt_Move(ev) {
     document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
 }
 
-// created by rjh: calculate the area using the array of vertex coordinates ({ 'x': x, 'y': y }) not applicable to intersected polygon
 function calc_area_perimeter(coordsarray) {
     var area = 0;
     var perimeter_length = 0;
@@ -548,6 +565,7 @@ function mouseDown(event) {
                     return false;
                 }
                 draw(true);
+                complete = true;
                 alert('Polygon closed');
                 event.preventDefault();
                 return false;
@@ -567,6 +585,7 @@ function mouseDown(event) {
                             return false;
                         }
                         draw(true);
+                        complete = true;
                         document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
                         document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
                         event.preventDefault();
@@ -624,28 +643,74 @@ function mouseDown(event) {
             isDown = true;
             break;
         case 'hand_tool':
+            sceneMouseDown(event);
             var mouseX = event.pageX - this.offsetLeft;
             var mouseY = event.pageY - this.offsetTop;
-            if (mouseX >= (currentX - tempWidth/2) &&
-                mouseX <= (currentX + tempWidth/2) &&
-                mouseY >= (currentY - tempHeight/2) &&
-                mouseY <= (currentY + tempHeight/2)) {
-              isDraggable = true;
+            if (mouseX >= (currentX - tempWidth / 2) &&
+                mouseX <= (currentX + tempWidth / 2) &&
+                mouseY >= (currentY - tempHeight / 2) &&
+                mouseY <= (currentY + tempHeight / 2)) {
+                isDraggable = true;
             }
             canvas.style.cursor = "move";
             break
         case 'zoom_in_tool':
+            zoom_scale *= 1.1; // changed by rjh:
             zoom(1.1);
-            zoom_scale *= 1.1;
             gridLine(zoom_scale);
             canvas.style.cursor = "zoom-in";
             break;
         case 'zoom_out_tool':
+            zoom_scale *= 0.9; // changed by rjh:
             zoom(0.9);
-            zoom_scale *= 0.9;
             gridLine(zoom_scale);
             canvas.style.cursor = "zoom-out";
             break;
+
+        case 'magic_wand_tool_magic': // appended by rjh
+            var mouseX = event.pageX - this.offsetLeft;
+            var mouseY = event.pageY - this.offsetTop;
+            if (event.button == 0) {
+                if (mask != null) {
+                    mask = null;
+                }
+                isDown = true;
+                allowDraw = true;
+                downPoint = getMousePosition(event);
+                drawMask(downPoint.x, downPoint.y);
+                canvas.style.cursor = 'crosshair';
+
+            } else allowDraw = false;
+            break;
+
+        case 'magic_wand_tool_add':
+            if (mask == null) return;
+            var mouseX = event.pageX;
+            var mouseY = event.pageY;
+            mouseX = mouseX - (currentX - imageInfo.width / 2);
+            mouseY = mouseY - (currentY - imageInfo.height / 2);
+
+            if (check_perimeter_pt_clicked(mouseX, mouseY, perimeter) != -1) {
+                canvas.style.cursor = "crosshair";
+                var id = check_perimeter_pt_clicked(mouseX, mouseY, perimeter);
+                selected_vertex_id = id;
+                var endMove = function() {
+                    canvas.removeEventListener('mousemove', while_pt_Move);
+                    canvas.removeEventListener('mouseup', endMove);
+                };
+
+                event.stopPropagation();
+                canvas.addEventListener('mousemove', while_pt_Move);
+                canvas.addEventListener('mouseup', endMove);
+
+            } else {
+                canvas.style.cursor = "default";
+            }
+
+            break;
+        case 'magic_wand_tool_subtract':
+            break;
+
     }
 }
 
@@ -672,7 +737,31 @@ function mouseUp(event) {
             isDown = false;
             break;
         case 'hand_tool':
+            sceneMouseUp(event);
+            // appended by rjh:
+            if (isDraggable) {
+                currentX = event.pageX - this.offsetLeft;
+                currentY = event.pageY - this.offsetTop;
+            }
+  
+            drawImage();
+            canvas.style.cursor = "move";
+            // appended by rjh:
+            if (cacheInd != null) {
+                sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
+                var magicX = Math.floor(magicX_rate * imageInfo.width);
+                var magicY = Math.floor(magicY_rate * imageInfo.height);
+                drawMask(magicX, magicY);
+            }
             isDraggable = false;
+            break;
+        case 'magic_wand_tool_magic': // appended by rjh:
+            isDown = false;
+            allowDraw = false;
+            break;
+        case 'magic_wand_tool_add':
+            break;
+        case 'magic_wand_tool_subtract':
             break;
     }
 }
@@ -698,26 +787,20 @@ function mouseMove(event) {
             point(x, y1);
             point(x1, y);
             point(x1, y1);
-            perimeter = new Array();
-            perimeter.push({ 'x': x, 'y': y });
-            perimeter.push({ 'x': x, 'y': y1 });
-            perimeter.push({ 'x': x1, 'y': y1 });
-            perimeter.push({ 'x': x1, 'y': y });
             break;
         case 'line_tool_circle':
             if (!isDown) return;
-            // console.log(complete);
             if (complete) {
                 var temp_x  = event.clientX - rect.left;
                 var temp_y = event.clientY - rect.top;
                 if (temp_x >= parseInt(verticalTop['x']) - 10 && temp_x <= parseInt(verticalTop['x']) + 10 && temp_y >= parseInt(verticalTop['y']) - 10 && temp_y <= parseInt(verticalTop['y']) + 10 ) {
                     verticalTop['x'] = temp_x;
                     verticalTop['y'] = temp_y;
-                    bezierLine(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, true);
+                    bezierCurve(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, true);
                 } else if (temp_x >= parseInt(verticalBottom['x']) - 10 && temp_x <= parseInt(verticalBottom['x']) + 10 && temp_y >= parseInt(verticalBottom['y']) - 10 && temp_y <= parseInt(verticalBottom['y']) + 10 ) {
                     verticalBottom['x'] = temp_x;
                     verticalBottom['y'] = temp_y;
-                    bezierLine(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, false);
+                    bezierCurve(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, false);
                 }
             } else {
                 x1 = parseInt(event.clientX - rect.left);
@@ -737,11 +820,7 @@ function mouseMove(event) {
             ctx.stroke();
             break
         case 'hand_tool':
-            if (isDraggable) {
-                currentX = event.pageX - this.offsetLeft;
-                currentY = event.pageY - this.offsetTop;
-            }
-            drawImage();
+            sceneMouseMove(event);
             canvas.style.cursor = "move";
             break;
         case 'zoom_in_tool':
@@ -781,7 +860,6 @@ function sceneMouseDown(e) {
     document.getElementById('line_tool_card').style.display = 'none';
     document.getElementById('magic_wand_tool_card').style.display = 'none';    
     if (selected_tool === 'magic_wand_tool_magic') {
-        console.log(selected_tool);
         if (e.button == 0) {
 
             // appended by rjh:
@@ -793,37 +871,121 @@ function sceneMouseDown(e) {
             downPoint = getMousePosition(e);
             drawMask(downPoint.x, downPoint.y);
         } else allowDraw = false;
+    } else {
+        startX = parseInt(e.clientX - rect.left);
+        startY = parseInt(e.clientY - rect.top);
+        draggingResizer = anchorHitTest(startX,startY);
+        isDraggable = draggingResizer < 0 && hitImage(startX,startY);
     }
 }
 
 function sceneMouseUp(event) {
-    
+    draggingResizer = -1;
+    isDraggable=false;
+    drawImage();
 }
 
-function sceneMouseMove(event) {
-    
+function sceneMouseMove(e) {
+    if(isDraggable){
+        imageClick = false;
+        mouseX = parseInt(e.clientX - rect.left);
+        mouseY = parseInt(e.clientY - rect.top);
+        // move the image by the amount of the latest drag
+        var dx = mouseX-startX;
+        var dy = mouseY-startY;
+        imageX += dx;
+        imageY += dy;
+        imageRight += dx;
+        imageBottom += dy;
+        // reset the startXY for next time
+        startX = mouseX;
+        startY = mouseY;
+        // redraw the image with border
+        drawImage();
+    }
 }
 
 function initializeVariables() {
     perimeter = new Array();
     complete = false;
     selected_tool = '';
+
+    // appended by rjh:
+    imageInfo = null;
+    cacheInd = null;
+    mask = null;
+    downPoint = null;
+    allowDraw = false;
+    currentThreshold = colorThreshold;
+
+    magicX_rate = 0; // appended by rjh:
+    magicY_rate = 0;
+
 }
 
 function drawImage() {
     sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
-    sceneCtx.drawImage(img, currentX-(tempWidth/2), currentY-(tempHeight/2), tempWidth, tempHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // sceneCtx.drawImage(img, currentX - (tempWidth / 2), currentY - (tempHeight / 2), tempWidth, tempHeight);
+    // sceneCtx.drawImage(img, currentX - (imageInfo.width / 2), currentY - (imageInfo.height / 2), imageInfo.width, imageInfo.height);
+    var tempCtx = document.createElement("canvas").getContext("2d");
+    tempCtx.canvas.width = window.innerWidth;
+    tempCtx.canvas.height = window.innerHeight;
+    tempCtx.drawImage(img, currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
+    imageInfo.data = tempCtx.getImageData(currentX - imageInfo.width / 2, currentY - imageInfo.height / 2, imageInfo.width, imageInfo.height);
+    sceneCtx.putImageData(imageInfo.data, currentX - imageInfo.width / 2, currentY - imageInfo.height / 2);
+
+
+
+    if (cacheInd != null) { // appended by rjh:
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBorder();
+    }
     gridLine(zoom_scale);
 }
 
-function zoom(scale){
+function zoom(scale) {
+
+    currentX = imageX + tempWidth / 2;
+    currentY = imageY + tempHeight / 2;
+    if (imageInfo == null) return;
+
     sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
+    imageInfo.width = Math.floor(imageInfo.width * scale);
+    imageInfo.height = Math.floor(imageInfo.height * scale);
+
+    // sceneCtx.drawImage(img, currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
+    var tempCtx = document.createElement("canvas").getContext("2d");
+    tempCtx.canvas.width = window.innerWidth;
+    tempCtx.canvas.height = window.innerHeight;
     tempWidth = tempWidth * scale;
-    tempHeight = tempHeight*scale;
-    sceneCtx.drawImage(img, currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
+    tempHeight = tempHeight * scale;
+    sceneCtx.drawImage(img, imageX, imageY, tempWidth, tempHeight);
+    tempCtx.drawImage(img, currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
+    imageInfo.data = tempCtx.getImageData(currentX - imageInfo.width / 2, currentY - imageInfo.height / 2, imageInfo.width, imageInfo.height);
+
+    sceneCtx.putImageData(imageInfo.data, currentX - imageInfo.width / 2, currentY - imageInfo.height / 2);
+
+    // appended by rjh: for magic wand after the zooming
+    // imageInfo.width = Math.floor(tempWidth);
+    // imageInfo.height = Math.floor(tempHeight);
+    // imageInfo.data = sceneCtx.getImageData(currentX - tempWidth / 2, currentY - tempHeight / 2, tempWidth, tempHeight);
+
+    imageInfo.width = Math.floor(imageInfo.width);
+    imageInfo.height = Math.floor(imageInfo.height);
+    imageInfo.data = sceneCtx.getImageData(currentX - imageInfo.width / 2, currentY - imageInfo.height / 2, imageInfo.width, imageInfo.height);
+
+    if (cacheInd != null) {
+        sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        var magicX = Math.floor(magicX_rate * imageInfo.width);
+        var magicY = Math.floor(magicY_rate * imageInfo.height);
+        drawMask(magicX, magicY);
+    }
+    //
 }
 
-setInterval(function() { hatchTick(); }, 300);
+// var draw_contour = setInterval(function() { hatchTick(); }, 300); // appended by rjh:
 
 function hatchTick() {
     hatchOffset = (hatchOffset + 1) % (hatchLength * 2);
@@ -840,8 +1002,10 @@ function drawBorder(noBorder) {
         res = imgData.data;
 
     if (!noBorder) cacheInd = MagicWand.getBorderIndices(mask);
-    otherCtx.clearRect((canvas.width - img.width) / 2, (canvas.height - img.height) / 2, w, h);
-    coordsarray = [];
+
+    otherCtx.clearRect((currentX - w / 2), (currentY - h / 2), w, h);
+
+    coordsarray = []; // appended by rjh:
     var len = cacheInd.length;
     for (j = 0; j < len; j++) {
         i = cacheInd[j];
@@ -858,21 +1022,33 @@ function drawBorder(noBorder) {
         }
         coordsarray.push({ 'x': x, 'y': y });
     }
-    ctx.putImageData(imageInfo.data, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2);
-    otherCtx.putImageData(imgData, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2);
-    gridLine();
-    console.log("area" + calc_area_perimeter(coordsarray));
-    console.log(coordsarray);
+
+    gridLine(zoom_scale);
+    otherCtx.putImageData(imgData, (currentX - w / 2), (currentY - h / 2)); // changed by rjh:
+
+    // created by rjh: sorting the points array
+    tmp_perimeter = [];
+    tmp_perimeter = find_perimeter_using_greedy(coordsarray);
+
+    perimeter = [];
+    step = 30;
+    for (i = 0; i < tmp_perimeter.length; i += step) {
+        perimeter.push(tmp_perimeter[i]);
+    }
+    //draw(true);
+    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
+    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
 }
 
 function getMousePosition(e) {
     x = e.clientX - rect.left;
     y = e.clientY - rect.top;
-    console.log(x, y);
+    magicX_rate = Math.floor(x - (currentX - imageInfo.width / 2)) / imageInfo.width;
+    magicY_rate = Math.floor(y - (currentY - imageInfo.height / 2)) / imageInfo.height;
     return {
-        x: Math.floor(x - (canvas.width - img.width) / 2),
-        y: Math.floor(y - (canvas.height - img.height) / 2)
-    };
+        x: Math.floor(x - (currentX - imageInfo.width / 2)),
+        y: Math.floor(y - (currentY - imageInfo.height / 2))
+    }; // changed by rjh
 }
 
 function drawMask(x, y) {
@@ -885,10 +1061,13 @@ function drawMask(x, y) {
     };
     mask = MagicWand.floodFill(image, x, y, currentThreshold, null, true);
     mask = MagicWand.gaussBlurOnlyBorder(mask, blurRadius);
+
+    sceneCtx.putImageData(imageInfo.data, currentX - image.width / 2, currentY - image.height / 2); // appended by rjh:
+
     drawBorder();
 };
 
-function bezierLine(p0, p1, p2, place){
+function bezierCurve(p0, p1, p2, place){
     temp_perimeter = new Array();
     var top_x = parseInt(2 * p1['x'] - p0['x'] / 2 - p2['x'] / 2);
     var top_y = parseInt(2 * p1['y'] - p0['y'] / 2 - p2['y'] / 2);
@@ -899,15 +1078,15 @@ function bezierLine(p0, p1, p2, place){
     ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
     var point_met = false;
     var pass = false;
-
+    if (perimeter.length === 0) return;
     if (place) {
-        ctx.moveTo(horizontalLeft['x'], horizontalLeft['y']);
+        // ctx.moveTo(horizontalLeft['x'], horizontalLeft['y']);
         temp_perimeter.push({ 'x': horizontalLeft['x'], 'y': horizontalLeft['y'] });
         for (var i = 0; i < 1.01; i += accuracy) {
             line_x = parseInt((1-i) * (1-i) * p0['x'] + 2 * (1-i) * i * top_x + i * i * p2['x']);
             line_y = parseInt((1-i) * (1-i) * p0['y'] + 2 * (1-i) * i * top_y + i * i * p2['y']);
             temp_perimeter.push({ 'x': line_x, 'y': line_y });
-            ctx.lineTo(line_x, line_y);
+            // ctx.lineTo(line_x, line_y);
         }
         
         for (var i = 0; i < perimeter.length; i++) {
@@ -921,22 +1100,19 @@ function bezierLine(p0, p1, p2, place){
             }
             if (point_met) {
                 temp_perimeter.push(perimeter[i]);
-                ctx.lineTo(perimeter[i]['x'], parseInt(perimeter[i]['y']));
             }
         }
         perimeter = new Array();
         temp_perimeter.forEach(elem => {
             perimeter.push(elem);
         });
-        // console.log(perimeter.length);
+        draw(true);
     } else {
-        ctx.moveTo(horizontalRight['x'], horizontalRight['y']);
         temp_perimeter.push({ 'x': horizontalRight['x'], 'y': horizontalRight['y'] });
         for (var i = 0; i < 1.01; i += accuracy) {
             line_x = parseInt((1-i) * (1-i) * p2['x'] + 2 * (1-i) * i * top_x + i * i * p0['x']);
             line_y = parseInt((1-i) * (1-i) * p2['y'] + 2 * (1-i) * i * top_y + i * i * p0['y']);
             temp_perimeter.push({ 'x': line_x, 'y': line_y });
-            ctx.lineTo(line_x, line_y);
         }
         var index = 0;
         perimeter.forEach(elem => {
@@ -956,19 +1132,94 @@ function bezierLine(p0, p1, p2, place){
             }
             if (point_met && pass) {
                 temp_perimeter.push(elem);
-                ctx.lineTo(elem['x'], elem['y']);
             }
         });
         perimeter = new Array();
         temp_perimeter.forEach(elem => {
             perimeter.push(elem);
         });
+        draw(true);
     }
     
-    ctx.closePath();
-    ctx.stroke();
-    ctx.fill();
-
     document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
     document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
 };
+
+function hitImage(x,y){
+    return(x > imageX && x < imageX + tempWidth && y > imageY && y < imageY + tempHeight);
+}
+
+function drawImage() {
+    sceneCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // draw the image
+    sceneCtx.drawImage(img, imageX, imageY, tempWidth, tempHeight);
+    gridLine(zoom_scale);
+}
+
+function anchorHitTest(x,y){
+    var dx,dy;
+    // top-left
+    dx = x-imageX;
+    dy = y-imageY;
+    if (dx * dx+dy * dy <= rr){ return(0); }
+    // top-right
+    dx = x-imageRight;
+    dy = y-imageY;
+    if (dx * dx+dy * dy <= rr){ return(1); }
+    // bottom-right
+    dx = x-imageRight;
+    dy = y-imageBottom;
+    if (dx * dx+dy * dy <= rr){ return(2); }
+    // bottom-left
+    dx = x-imageX;
+    dy = y-imageBottom;
+    if (dx * dx+dy * dy <= rr){ return(3); }
+    return(-1);
+}
+
+// created by rjh: implementation of greedy algorithm 
+
+function find_perimeter_using_greedy(coordsarray) {
+
+    let id = 0;
+    let min_distance;
+    let id_array = [];
+    let x, y, x1, y1;
+    let subid = 0;
+    while (id < coordsarray.length) {
+        subid = id + 1;
+        if (subid == coordsarray.length) break;
+
+        x = coordsarray[id]['x'];
+        y = coordsarray[id]['y'];
+        x1 = coordsarray[subid]['x'];
+        y1 = coordsarray[subid]['y'];
+
+        min_distance = Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2));
+        while (subid < coordsarray.length) {
+            x1 = coordsarray[subid]['x'];
+            y1 = coordsarray[subid]['y'];
+            dist = Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2));
+            if (dist < min_distance) {
+                min_distance = dist;
+                id_array.push(subid);
+            }
+            subid += 1;
+        }
+        if (id_array.length !== 0) { // swapping the values 
+            let swap_id = id_array[id_array.length - 1];
+            let tmp = {};
+            tmp['x'] = coordsarray[id + 1]['x'];
+            tmp['y'] = coordsarray[id + 1]['y'];
+            coordsarray[id + 1]['x'] = coordsarray[swap_id]['x'];
+            coordsarray[id + 1]['y'] = coordsarray[swap_id]['y'];
+            coordsarray[swap_id]['x'] = tmp['x'];
+            coordsarray[swap_id]['y'] = tmp['y'];
+
+        }
+        id_array = [];
+        id += 1;
+    }
+    return coordsarray;
+}
