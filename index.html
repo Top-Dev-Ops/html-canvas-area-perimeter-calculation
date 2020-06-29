@@ -2,13 +2,10 @@
 
 <head>
     <title>Area & Perimeter</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="css/main.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
-        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
-        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -17,9 +14,8 @@
     <button class="btn btn-danger hide-canvas" id="hide_canvas">HIDE CANVAS</button>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="z-index: 1000;">
         <img src="assets/icons/logo.ico" class="img-logo" alt="">
-        <a class="navbar-brand" href="#"> Area Calculation</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand" href="#"> Area & Perimeter Calculation</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -38,8 +34,7 @@
                     <input id="scale_text" type="text" class="form-control scale" value="5">
                 </div>
                 <div class="nav-item dropdown">
-                    <button type="button" class="btn dropdown-toggle btn-unit" href="#" id="navbarDropdown" role="button"
-                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn dropdown-toggle btn-unit" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         centimeters
                     </button>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
@@ -60,8 +55,6 @@
                             <input type="file" id="file" class="file">
                         </label>
                         <label class="dropdown-item" href="#" id="show_map">Show Map</label>
-                        <label class="dropdown-item" href="#" id="settings">Settings</label>
-                        <label class="dropdown-item" href="#" id="help">Help</label>
                     </div>
                 </div>
             </form>
@@ -83,13 +76,10 @@
             <img src="assets/icons/line_tool.png" id="line_tool" alt="line_tool" class="img-control">
             <img src="assets/icons/magic_wand.png" id="magic_wand_tool" alt="magic_wand" class="img-control">
             <img src="assets/icons/pen.png" id="pen_tool" alt="pen" class="img-control">
-            <img src="assets/icons/mouse_pointer.png" id="mouse_pointer_tool" alt="mouse_pointer" class="img-control">
             <img src="assets/icons/zoom_in.png" id="zoom_in_tool" alt="zoom_in" class="img-control">
             <img src="assets/icons/zoom_out.png" id="zoom_out_tool" alt="zoom_out" class="img-control">
             <img src="assets/icons/hand.png" id="hand_tool" alt="hand" class="img-control">
             <img src="assets/icons/undo.png" id="undo_tool" alt="undo" class="img-control">
-            <img src="assets/icons/redo.png" id="redo_tool" alt="redo" class="img-control">
-            <img src="assets/icons/sms.png" id="sms_tool" alt="sms" class="img-control">
         </div>
     </div>
 
@@ -98,10 +88,6 @@
             <div class="row img-control" id="line_tool_line">
                 <span class="col-md-10">Line Tool</span>
                 <img src="assets/icons/line_tool.png" alt="line_tool">
-            </div>
-            <div class="row img-control" id="line_tool_constrained">
-                <span class="col-md-10">Constrained Line Tool</span>
-                <img src="assets/icons/constrianed_line_tool.png" alt="constrianed_line_tool">
             </div>
             <div class="row img-control" id="line_tool_rectangle">
                 <span class="col-md-10">Rectangle Tool</span>
@@ -120,20 +106,12 @@
                 <span class="col-md-10">Magic Wand</span>
                 <img src="assets/icons/magic_wand.png" alt="magic_wand">
             </div>
-            <div class="row img-control" id="magic_wand_tool_add">
-                <span class="col-md-10">Add To Area</span>
-                <img src="assets/icons/magic_wand_add.png" alt="magic_wand_add">
-            </div>
-            <div class="row img-control" id="magic_wand_tool_subtract">
-                <span class="col-md-10">Subtract From Area</span>
-                <img src="assets/icons/magic_wand_subtract.png" alt="magic_wand_subtract">
-            </div>
         </div>
     </div>
-    
+
     <ul class="list-group list-group-horizontal area-panel" id="area_panel">
         <li class="list-group-item" id="area_add"><span class="area-index">+</span></li>
-        <li class="list-group-item" id="area_1" onclick="area_panel_clicked(this);"><span class="area-index">1</span></li>
+        <li class="list-group-item" id="area_1" onclick="area_panel_clicked(this);"><span id="area_index_1" class="area-index">1</span></li>
         <div class="list-group-item area_info" id="area_info_1">
             <svg class="bi bi-square" width="1em" height="1em" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
@@ -146,9 +124,14 @@
         </div>
     </ul>
 
+    <div class="card text-white bg-secondary" style="z-index: 500; padding-left: 5px; padding-right: 5px;" id="area_details_1"></div>
+
     <canvas id="canvas" class="canvas-area"></canvas>
     <canvas id="canvas_background" class="canvas-background"></canvas>
     <script src="js/magic-wand.js"></script>
+    <script src="js/filesaver.js"></script>
     <script src="js/main.js"></script>
+    <!-- <script src="js/obfuscated.js"></script> -->
 </body>
+
 </html>
