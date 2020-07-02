@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>Area & Perimeter</title>
+    <title>Xcope</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="css/main.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -12,9 +12,8 @@
     <img src="assets/background.jpg" id="background" class="background" alt="" style="display: none">
     <button class="btn btn-danger hide-image" id="hide_image">HIDE IMAGE</button>
     <button class="btn btn-danger hide-canvas" id="hide_canvas">HIDE CANVAS</button>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="z-index: 1000;">
-        <img src="assets/icons/logo.ico" class="img-logo" alt="">
-        <a class="navbar-brand" href="#"> Area & Perimeter Calculation</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="z-index: 1000; padding-top: 0; padding-bottom: 0;">
+        <a class="navbar-brand" href="#" style="padding-top: 0; padding-bottom: 2"><b>Xcope</b><br><small>Estimating Software Calculation</small></a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -38,9 +37,9 @@
                         centimeters
                     </button>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="#">centimeters</a>
-                        <a class="dropdown-item" href="#">meters</a>
-                        <a class="dropdown-item" href="#">inches</a>
+                        <a class="dropdown-item" id="centimeters" href="#">centimeters</a>
+                        <a class="dropdown-item" id="meters" href="#">meters</a>
+                        <a class="dropdown-item" id="inches" href="#">inches</a>
                     </div>
                 </div>
                 <div class="nav-item dropdown">

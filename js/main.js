@@ -50,6 +50,7 @@ var imageRight, imageBottom;
 var dragged;
 var dragStart;
 
+var unit = "cm";
 
 var selected_vertex_id = -1;
 
@@ -76,10 +77,11 @@ magicY_rate = 0;
 
 // draw grids on canvas.
 $(function() {
+    canvas.style.zIndex = "12";
     // if (!window.location.href.includes('greatitteam.site')) {
     //     window.location.href = "https://google.com";
     // }
-    gridLine();
+    // gridLine();
     trackTransforms(sceneCtx);
     var area_details_1 = document.getElementById('area_details_1');
     var area_info_1 = document.getElementById('area_info_1');
@@ -103,6 +105,20 @@ function gridLine(zoom_scale = 1) {
     }
     sceneCtx.stroke();
 }
+
+// unit change
+document.getElementById('centimeters').addEventListener('click', function(e) {
+    unit = "cm";
+    document.getElementById('navbarDropdown').innerText = "centimeters";
+});
+document.getElementById('meters').addEventListener('click', function(e) {
+    unit = "m";
+    document.getElementById('navbarDropdown').innerText = "meters";
+});
+document.getElementById('inches').addEventListener('click', function(e) {
+    unit = "in";
+    document.getElementById('navbarDropdown').innerText = "inches";
+});
 
 // scale canvas when the scale value is changed(by either clicking scale up/down buttons or inputing value manually.)
 document.getElementById('scale_up_button').addEventListener('click', function(e) {
@@ -133,7 +149,7 @@ document.getElementById('save').addEventListener('click', function(e) {
 });
 document.getElementById('export').addEventListener('click', function(e) {
     var blob = new Blob([JSON.stringify(perimeter_list)], { type: 'text/plain;chartset=utf-8' });
-    saveAs(blob, "static.txt");
+    saveAs(blob, "points.txt");
 });
 document.getElementById('print').addEventListener('click', function(e) {
     window.print();
@@ -176,12 +192,14 @@ document.getElementById('area_add').addEventListener('click', function() {
     perimeter_list.push(perimeter);
     if (selected_tool == 'line_tool_circle') {
         point_list.push([horizontalRight, verticalBottom, horizontalLeft, verticalTop]);
+    } else if (selected_tool == 'pen_tool') {
+        point_list.push([perimeter[0]]);
     } else {
         point_list.push(null);
     }
     area_length++;
     document.getElementById('area_panel').insertAdjacentHTML('beforeend', "<li class='list-group-item' id='area_" + area_length + "' onclick='area_panel_clicked(this);'><span class='area-index' id='area_index_" + area_length + "'>" + area_length + "</span></li>");
-    document.getElementById('area_panel').insertAdjacentHTML('beforeend', "<div class='list-group-item area_info' id='area_info_" + area_length + "'><svg class='bi bi-square' width='1em' height='1em' viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z'/></svg><span style='color: white;' id='area_perimeter_" + area_length + "'>0 cm</span><svg class='bi bi-square-fill' width='1em' height='1em' viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'><rect width='16' height='16' rx='2'/></svg><span style='color: white;' id='area_area_" + area_length + "'>0 cm<sup>2</sup></span></div>");
+    document.getElementById('area_panel').insertAdjacentHTML('beforeend', "<div class='list-group-item area_info' id='area_info_" + area_length + "'><svg class='bi bi-square' width='1em' height='1em' viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z'/></svg><span style='color: white;' id='area_perimeter_" + area_length + "'>0 " + unit + "</span><svg class='bi bi-square-fill' width='1em' height='1em' viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'><rect width='16' height='16' rx='2'/></svg><span style='color: white;' id='area_area_" + area_length + "'>0 " + unit + "<sup>2</sup></span></div>");
 
     var area_text = calcAreaDetails(0);
     document.body.insertAdjacentHTML('beforeend', "<div class='card text-white bg-secondary' style='z-index: 500; padding-left: 5px; padding-right: 5px;' id='area_details_" + area_length + "'>" + area_text + "</div>");
@@ -194,7 +212,7 @@ document.getElementById('area_add').addEventListener('click', function() {
 
     document.getElementById('area_index_' + area_length).style.color = 'white';
     document.getElementById('area_' + area_length).style.background = '#5c5b58';
-    
+
     var index = area_length - 1;
     while (index > 0) {
         document.getElementById('area_info_' + index).style.display = 'none';
@@ -216,8 +234,10 @@ function area_panel_clicked(event) {
     perimeter_list.push(perimeter);
     if (selected_tool == 'line_tool_circle') {
         point_list.push([horizontalRight, verticalBottom, horizontalLeft, verticalTop]);
-    } else {
+    } else if (selected_tool == 'pen_tool') {
         point_list.push([perimeter[0]]);
+    } else {
+        point_list.push(null);
     }
     selected_tool = '';
     complete = true;
@@ -234,13 +254,13 @@ function area_panel_clicked(event) {
             document.getElementById('area_details_' + index).innerHTML = a;
 
             draw(true);
-            if (point_list[index - 1] == null) {
-                perimeter.forEach(elem => {
-                    point(elem.x, elem.y);
-                });
-            } else {
-                point_list[index - 1].forEach(elem => point(elem.x, elem.y));
-            }
+            // if (point_list[index - 1] == null) {
+            //     perimeter.forEach(elem => {
+            //         point(elem.x, elem.y);
+            //     });
+            // } else {
+            //     point_list[index - 1].forEach(elem => point(elem.x, elem.y));
+            // }
             complete = true;
             var area_index_div = document.getElementById('area_' + index);
             var area_index = document.getElementById('area_index_' + index);
@@ -331,6 +351,13 @@ document.getElementById('undo_tool').addEventListener('click', function(e) {
     document.getElementById('line_tool_card').style.display = 'none';
     document.getElementById('magic_wand_tool_card').style.display = 'none';
     selected_tool = "undo_tool";
+    var element = document.getElementById('area_' + area_length);
+    element.parentNode.removeChild(element);
+    var element = document.getElementById('area_info_' + area_length);
+    element.parentNode.removeChild(element);
+    var element = document.getElementById('area_details_' + area_length);
+    element.parentNode.removeChild(element);
+    area_length--;
 });
 
 // line tool card selection.
@@ -355,6 +382,12 @@ document.getElementById('magic_wand_tool_magic').addEventListener('click', funct
     selected_tool = 'magic_wand_tool_magic';
     document.getElementById('magic_wand_tool_card').style.display = 'none';
     scene.style.zIndex = 2;
+    canvas.style.zIndex = "12";
+    if (perimeter != null) {
+        perimeter = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    //
 });
 
 // mouse events to canvas
@@ -384,7 +417,24 @@ var readURL = function(input) {
                 imageX = (scene.width - tempWidth) / 2;
                 imageY = (scene.height - tempHeight) / 2;
                 initialLeft = { x: imageX, y: imageY };
-                
+
+                // imageRight = imageX + tempWidth;
+                // imageBottom = imageY + tempHeight;
+
+                // restored by rjh:6.29
+                imageInfo = {
+                    width: canvas.width,
+                    height: canvas.height,
+                    context: ctx
+                };
+
+                var tempCtx = document.createElement("canvas").getContext("2d");
+                tempCtx.canvas.width = window.innerWidth;
+                tempCtx.canvas.height = window.innerHeight;
+                tempCtx.drawImage(img, (canvas.width - img.width) / 2, (canvas.height - img.height) / 2);
+                imageInfo.data = tempCtx.getImageData(0, 0, imageInfo.width, imageInfo.height);
+                //
+
                 var p1 = sceneCtx.transformedPoint(0, 0);
                 var p2 = sceneCtx.transformedPoint(scene.width, scene.height);
                 sceneCtx.clearRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
@@ -420,6 +470,106 @@ function point(x, y) {
     ctx.fillRect(x - 3, y - 3, 6, 6);
     ctx.moveTo(x, y);
 }
+
+// created by rjh: 6.30
+
+function get_len_mp_angle(x1 = 0, y1 = 0, x2 = 0, y2 = 0) {
+
+    if (x1 == null || x2 == null || y1 == null || y2 == null) return;
+
+    var len = Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2));
+
+    var mid_point = { x: Math.floor(x1 + x2) / 2, y: Math.floor(y1 + y2) / 2 };
+
+    let vect = { 'x': x1 - x2, 'y': y1 - y2 };
+
+    let angle = Math.atan(vect['y'] / vect['x']);
+
+    return { len: (len / scale).toFixed(2), mp: mid_point, ang: angle };
+}
+
+function draw_label() {
+
+    if (perimeter.length == 1) return;
+
+    let tmp_perimeter = [...perimeter];
+    if (!complete && selected_tool == 'line_tool_line') {
+
+    } else {
+        tmp_perimeter.push(perimeter[0]);
+    }
+    var id = 0;
+    for (id = 1; id < tmp_perimeter.length; id++) {
+        len_mp = get_len_mp_angle(tmp_perimeter[id]['x'], tmp_perimeter[id]['y'], tmp_perimeter[id - 1]['x'], tmp_perimeter[id - 1]['y']);
+        ctx.beginPath();
+        ctx.lineWidth = "1";
+        ctx.strokeStyle = "#000000";
+
+        // rotating the text and rect
+        ctx.save();
+        ctx.translate(len_mp['mp']['x'], len_mp['mp']['y']);
+        ctx.rotate(len_mp['ang']);
+        ctx.fillStyle = "black";
+        ctx.rect(-25, -15, 50, 15); // draw rectangle
+        ctx.fillRect(-25, -15, 50, 15);
+
+        ctx.fillStyle = "white";
+        ctx.font = "15px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(len_mp['len'], 0, -2); // write text
+        ctx.stroke();
+
+        ctx.restore();
+        ctx.closePath();
+
+    }
+}
+
+function draw_circle_label(hLeft = 0, vBottom = 0, hRight = 0, vTop = 0) {
+
+    if (hLeft == null || vBottom == null || hRight == null || vTop == null) return;
+    let tmp_perimeter = [];
+    if (hLeft == 0 && vBottom == 0 && hRight == 0 && vTop == 0) {
+        tmp_perimeter = [...perimeter];
+    } else {
+        tmp_perimeter.push(hLeft);
+        tmp_perimeter.push(vBottom);
+        tmp_perimeter.push(hRight);
+        tmp_perimeter.push(vTop);
+    }
+    var id = 0;
+    for (id = 0; id < tmp_perimeter.length; id += 1) {
+        len_mp = get_len_mp_angle(centerX, centerY, tmp_perimeter[id]['x'], tmp_perimeter[id]['y']);
+
+        ctx.beginPath();
+
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(tmp_perimeter[id]['x'], tmp_perimeter[id]['y']);
+
+        ctx.lineWidth = "1";
+        ctx.strokeStyle = "#000000";
+
+        // rotating the text and rect
+        ctx.save();
+        ctx.translate(len_mp['mp']['x'], len_mp['mp']['y']);
+        ctx.rotate(len_mp['ang']);
+        ctx.fillStyle = "black";
+        ctx.rect(-25, -15, 50, 15); // draw rectangle
+        ctx.fillRect(-25, -15, 50, 15);
+
+        ctx.fillStyle = "white";
+        ctx.font = "15px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(len_mp['len'], 0, -2); // write text
+        ctx.stroke();
+
+        ctx.restore();
+        ctx.closePath();
+
+    }
+}
+
+//
 
 function draw(end) {
     ctx.lineWidth = 1;
@@ -486,6 +636,7 @@ function drawRecCircle(x1, y1, x2, y2) {
         point(x1, y2);
         point(x2, y1);
         point(x2, y2);
+        draw_label(); // appended by rjh: 6.30
     } else if (selected_tool === 'line_tool_circle') {
         radiusX = (x2 - x1) * 0.5, // radius for x based on input
             radiusY = (y2 - y1) * 0.5, // radius for y based on input
@@ -536,17 +687,21 @@ function drawRecCircle(x1, y1, x2, y2) {
         point(horizontalRight['x'], horizontalRight['y']);
         point(verticalBottom['x'], verticalBottom['y']);
         point(verticalTop['x'], verticalTop['y']);
+        draw_circle_label(horizontalLeft, verticalBottom, horizontalRight, verticalTop); // appended by rjh:6.30
     }
 }
 
 function check_perimeter_pt_clicked(x, y, perimeter) {
-    var len = perimeter.length - 1;
-    while (len > -1) {
-        if (x > perimeter[len]['x'] - 10 && x < perimeter[len]['x'] + 10 &&
-            y > perimeter[len]['y'] - 10 && y < perimeter[len]['y'] + 10) {
-            return len;
+    var len = -1;
+    if (perimeter != null) {
+        len = perimeter.length - 1;
+        while (len > -1) {
+            if (x > perimeter[len]['x'] - 10 && x < perimeter[len]['x'] + 10 &&
+                y > perimeter[len]['y'] - 10 && y < perimeter[len]['y'] + 10) {
+                return len;
+            }
+            len -= 1;
         }
-        len -= 1;
     }
     return len;
 }
@@ -557,13 +712,14 @@ function while_pt_Move(ev) {
     if (check_intersect(ev.clientX, ev.clientY)) {
         console.log("ERROR");
     }
-    // ctx.clearRect(0, 0, canvas.width, canvas.height); // deleted by rjh:6.26
     draw(true);
+    draw_label(); // appended by rjh: 6.30
+
     perimeter.forEach(element => {
         point(element['x'], element['y']);
     });
-    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
     var temp_area = document.getElementById('area_area_' + area_length).innerText;
     temp_area = temp_area.substring(0, temp_area.length - 4);
     var a = calcAreaDetails(temp_area);
@@ -591,10 +747,8 @@ function calc_area_perimeter(coordsarray) {
         id += 1;
     }
 
-    tmp_area = area / Math.pow(zoom_scale, 2);
-    tmp_perimeter_length = perimeter_length / zoom_scale;
-    area = tmp_area;
-    perimeter_length = tmp_perimeter_length;
+    area = area / (Math.pow(zoom_scale, 2) * Math.pow(scale, 2));
+    perimeter_length = perimeter_length / (zoom_scale * scale);
     var result = { 'area': Math.abs(area / 2).toFixed(2), 'perimeter': perimeter_length.toFixed(2) };
     return result;
 }
@@ -638,6 +792,7 @@ function mouseDown(event) {
                 complete = true;
                 alert('Polygon closed');
                 event.preventDefault();
+                draw_label(); // appended by rjh: 6.30
                 return false;
             } else {
                 x = event.clientX - rect.left;
@@ -656,11 +811,12 @@ function mouseDown(event) {
                         }
                         draw(true);
                         complete = true;
+                        draw_label(); // appended by rjh: 6.30
                         perimeter.forEach(elem => {
                             point(elem['x'], elem['y']);
                         });
-                        document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-                        document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+                        document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+                        document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
                         var temp_area = document.getElementById('area_area_' + area_length).innerText;
                         temp_area = temp_area.substring(0, temp_area.length - 4);
                         var a = calcAreaDetails(temp_area);
@@ -680,6 +836,7 @@ function mouseDown(event) {
                 }
                 perimeter.push({ 'x': x, 'y': y });
                 draw(false);
+                draw_label(); // appended by rjh: 6.30
                 return false;
             }
             break;
@@ -747,7 +904,7 @@ function mouseDown(event) {
                 isDown = true;
                 allowDraw = true;
                 downPoint = getMousePosition(event);
-                drawMask(downPoint.x, downPoint.y);
+                drawMask(downPoint['x'], downPoint['y']); // appended by rjh:6.29
                 canvas.style.cursor = 'crosshair';
 
             } else allowDraw = false;
@@ -764,8 +921,8 @@ function mouseUp(event) {
                 y1 = event.clientY - rect.top;
                 drawRecCircle(x, y, x1, y1);
             }
-            document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-            document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+            document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+            document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
             var temp_area = document.getElementById('area_area_' + area_length).innerText;
             temp_area = temp_area.substring(0, temp_area.length - 4);
             var a = calcAreaDetails(temp_area);
@@ -775,8 +932,8 @@ function mouseUp(event) {
             complete = true;
             break;
         case 'line_tool_circle':
-            document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-            document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+            document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+            document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
             var temp_area = document.getElementById('area_area_' + area_length).innerText;
             temp_area = temp_area.substring(0, temp_area.length - 4);
             var a = calcAreaDetails(temp_area);
@@ -841,18 +998,20 @@ function mouseMove(event) {
                     verticalTop['x'] = temp_x;
                     verticalTop['y'] = temp_y;
                     bezierCurve(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, true);
+                    draw_circle_label(horizontalLeft, verticalBottom, horizontalRight, verticalTop); // appended br rjh: 6.30
                 } else if (temp_x >= parseInt(verticalBottom['x']) - 10 && temp_x <= parseInt(verticalBottom['x']) + 10 && temp_y >= parseInt(verticalBottom['y']) - 10 && temp_y <= parseInt(verticalBottom['y']) + 10) {
                     verticalBottom['x'] = temp_x;
                     verticalBottom['y'] = temp_y;
                     bezierCurve(horizontalLeft, { 'x': temp_x, 'y': temp_y }, horizontalRight, false);
+                    draw_circle_label(horizontalLeft, verticalBottom, horizontalRight, verticalTop); // appended br rjh: 6.30
                 }
             } else {
                 x1 = parseInt(event.clientX - rect.left);
                 y1 = parseInt(event.clientY - rect.top);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 drawRecCircle(x, y, x1, y1);
-                document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-                document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+                document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+                document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
                 var temp_area = document.getElementById('area_area_' + area_length).innerText;
                 temp_area = temp_area.substring(0, temp_area.length - 4);
                 var a = calcAreaDetails(temp_area);
@@ -870,8 +1029,8 @@ function mouseMove(event) {
                     draw(perimeter);
                     isDown = false;
                     beyond = false;
-                    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-                    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+                    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+                    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
                     var temp_area = document.getElementById('area_area_' + area_length).innerText;
                     temp_area = temp_area.substring(0, temp_area.length - 4);
                     var a = calcAreaDetails(temp_area);
@@ -883,6 +1042,7 @@ function mouseMove(event) {
                 ctx.lineTo(x1, y1);
                 ctx.stroke();
             }
+
             break;
     }
 }
@@ -913,14 +1073,12 @@ function sceneMouseDown(e) {
     switch (selected_tool) {
         case 'zoom_in_tool':
             zoom(1);
-            // gridLine(zoom_scale);
-            gridLine(); // changed by rjh:6.28
+            gridLine();
             zoom_wheel++;
             break;
         case 'zoom_out_tool':
             zoom(-1);
-            // gridLine(zoom_scale);
-            gridLine(); // changed by rjh:6.28
+            gridLine();
             zoom_wheel--;
             break;
         case 'hand_tool':
@@ -981,6 +1139,14 @@ function initializeVariables() {
     magicX_rate = 0;
     magicY_rate = 0;
     imageRight, imageBottom;
+
+    //appended by rjh: 6.30
+    centerX = 0;
+    centerY = 0;
+    radiusX = 0;
+    radiusY = 0;
+    //
+
 }
 
 function drawImage() {
@@ -998,8 +1164,7 @@ function drawImage() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBorder();
     }
-    // gridLine(zoom_scale);
-    gridLine(); // changed by rjh:6.28
+    gridLine();
 }
 var lastX = canvas.width / 2,
     lastY = canvas.height / 2;
@@ -1010,6 +1175,14 @@ function redraw() {
     sceneCtx.clearRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
     sceneCtx.drawImage(img, initialLeft.x, initialLeft.y);
     // gridLine(zoom_scale);
+
+    //appended by rjh: 6.29
+    imageInfo.data = sceneCtx.getImageData(0, 0, canvas.width, canvas.height);
+    if (perimeter != null) {
+        perimeter = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    //
 }
 
 function zoom(scale) {
@@ -1046,32 +1219,32 @@ function drawBorder(noBorder) {
         x = i % w; // calc x by index
         y = (i - x) / w; // calc y by index
         k = (y * w + x) * 4;
-        if ((x + y + hatchOffset) % (hatchLength * 2) < hatchLength) { // detect hatch color 
-            res[k + 3] = 255; // black, change only alpha
-        } else {
-            res[k] = 255; // white
-            res[k + 1] = 255;
-            res[k + 2] = 255;
-            res[k + 3] = 255;
-        }
+        // if ((x + y + hatchOffset) % (hatchLength * 2) < hatchLength) { // detect hatch color 
+        //     res[k + 3] = 255; // black, change only alpha
+        // } else {
+        //     res[k] = 255; // white
+        //     res[k + 1] = 255;
+        //     res[k + 2] = 255;
+        //     res[k + 3] = 255;
+        // }
+        res[k + 3] = 255;
         coordsarray.push({ 'x': x, 'y': y });
     }
 
-    // gridLine(zoom_scale);
-    gridLine(); // changed by rjh:6.28
+    gridLine();
     otherCtx.putImageData(imgData, (currentX - w / 2), (currentY - h / 2));
 
     tmp_perimeter = [];
     tmp_perimeter = find_perimeter_using_greedy(coordsarray);
 
     perimeter = [];
-    step = 30;
+    step = 10;
     for (i = 0; i < tmp_perimeter.length; i += step) {
         perimeter.push(tmp_perimeter[i]);
     }
     draw(true);
-    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
     var temp_area = document.getElementById('area_area_' + area_length).innerText;
     temp_area = temp_area.substring(0, temp_area.length - 4);
     var a = calcAreaDetails(temp_area);
@@ -1101,7 +1274,7 @@ function drawMask(x, y) {
     mask = MagicWand.floodFill(image, x, y, currentThreshold, null, true);
     mask = MagicWand.gaussBlurOnlyBorder(mask, blurRadius);
 
-    sceneCtx.putImageData(imageInfo.data, currentX - image.width / 2, currentY - image.height / 2);
+    // sceneCtx.putImageData(imageInfo.data, currentX - image.width / 2, currentY - image.height / 2);
 
     drawBorder();
 };
@@ -1178,8 +1351,8 @@ function bezierCurve(p0, p1, p2, place) {
         draw(true);
     }
 
-    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' cm';
-    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' cm<sup>2</sup>';
+    document.getElementById('area_perimeter_' + area_length).innerHTML = calc_area_perimeter(perimeter).perimeter + ' ' + unit;
+    document.getElementById('area_area_' + area_length).innerHTML = calc_area_perimeter(perimeter).area + ' ' + unit + '<sup>2</sup>';
     var temp_area = document.getElementById('area_area_' + area_length).innerText;
     temp_area = temp_area.substring(0, temp_area.length - 4);
     var a = calcAreaDetails(temp_area);
@@ -1213,22 +1386,31 @@ function anchorHitTest(x, y) {
 }
 
 function find_perimeter_using_greedy(coordsarray) {
+    if (coordsarray == []) return;
     let id = 0;
     let min_distance;
     let id_array = [];
     let x, y, x1, y1;
     let subid = 0;
-    while (id < coordsarray.length) {
+    let array_len = coordsarray.length; // appended by rjh: 6.29
+    // appended by rjh:6.29
+    let x0 = coordsarray[0]['x'];
+    let y0 = coordsarray[0]['y'];
+    let distance_to_0 = 0;
+    //
+    while (id < array_len) {
         subid = id + 1;
-        if (subid == coordsarray.length) break;
+        if (subid == array_len) break;
 
         x = coordsarray[id]['x'];
         y = coordsarray[id]['y'];
         x1 = coordsarray[subid]['x'];
         y1 = coordsarray[subid]['y'];
 
+        distance_to_0 = Math.sqrt(Math.pow(x - x0, 2) + Math.pow(y - y0, 2)); // appended by rjh:6.29
+
         min_distance = Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2));
-        while (subid < coordsarray.length) {
+        while (subid < array_len) {
             x1 = coordsarray[subid]['x'];
             y1 = coordsarray[subid]['y'];
             dist = Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2));
@@ -1238,6 +1420,11 @@ function find_perimeter_using_greedy(coordsarray) {
             }
             subid += 1;
         }
+        // appended by rjh:6.29 for finishing the outline of polygon
+        if (min_distance > distance_to_0 && id > (array_len * 2 / 3)) {
+            return coordsarray.slice(0, id);
+        }
+        //
         if (id_array.length !== 0) { // swapping the values 
             let swap_id = id_array[id_array.length - 1];
             let tmp = {};
